@@ -4,9 +4,13 @@ import Model.Server;
 import Model.Task;
 
 import java.awt.datatransfer.StringSelection;
+import java.io.PrintWriter;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class SimulationManager implements Runnable {
+    private ExecutorService pool;
     private Scheduler scheduler;
     //private SimulationFrame frame;
     private List<Task> tasks;
@@ -14,14 +18,20 @@ public class SimulationManager implements Runnable {
     public int timeLimit = 30;
     public int maxProcessingTime = 10;
     public int minProcessingTime = 2;
-    public int numberOfServers = 3;
-    public int numberOfClients = 12;
+    public int numberOfServers = 2;
+    public int numberOfClients = 5;
     public int maxArrivalTime = 20;
     public int minArrivalTime = 2;
+
+    private double totalWaitingTime = 0;
+    private double totalServiceTime = 0;
+    private int peakHour = 0;
+    private int maxClients = -1;
 
     public SimulationManager(){
         this.scheduler = new Scheduler(numberOfServers, numberOfClients);
         this.scheduler.changeStrategy(selectionPolicy);
+        this.pool = Executors.newFixedThreadPool(numberOfServers);
         generateNRandomTasks();
     }
 
@@ -33,6 +43,8 @@ public class SimulationManager implements Runnable {
             int arrivalTime = random.nextInt(maxArrivalTime - minArrivalTime + 1) + minArrivalTime;
             int processingTime = random.nextInt(maxProcessingTime - minProcessingTime + 1) + minProcessingTime;
             tasks.add(new Task(id, arrivalTime, processingTime));
+            totalServiceTime += processingTime;
+
         }
         tasks.sort(new Comparator<Task>() {
             @Override
@@ -49,26 +61,51 @@ public class SimulationManager implements Runnable {
 
     @Override
     public void run() {
+        for(Server server : scheduler.getServers()){
+            pool.execute(server);
+        }
+
         int currentTime = 0;
         while(currentTime <= timeLimit){
             Iterator<Task> iterator = tasks.iterator();
+
             while(iterator.hasNext()){
                 Task task = iterator.next();
                 if(task.getArrivalTime() == currentTime){
-                    scheduler.dispatchTask(task);
+                    totalWaitingTime += scheduler.dispatchTask(task);
                     iterator.remove();
                 }
+            }
+
+            int currentClients = 0;
+            for(Server server :  scheduler.getServers())
+                currentClients += server.getTasks().length;
+            if(currentClients >= maxClients){
+                maxClients = currentClients;
+                peakHour = currentTime;
+            }
+
+            System.out.println(getLogOfEvents(currentTime));
+
+            if(tasks.isEmpty() && areAllServersEmpty()) break;
+
+            for(Server server : scheduler.getServers()){
+                server.tick();
             }
 
             try {
                 Thread.sleep(1000L);
             }catch (InterruptedException e){
-                Thread.currentThread().interrupt();
                 break;
             }
-            System.out.println(getLogOfEvents(currentTime));
+
             currentTime++;
+
         }
+        System.out.println("Average waiting time: " + (totalWaitingTime/numberOfClients));
+        System.out.println("Average service time: " + (totalServiceTime/numberOfClients));
+        System.out.println("Peak hour: " + peakHour);
+        pool.shutdownNow();
     }
 
     private String getLogOfEvents(int currentTime) {

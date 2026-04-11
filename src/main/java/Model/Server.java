@@ -34,21 +34,22 @@ public class Server implements Runnable {
         waitingPeriod.addAndGet(newTask.getServiceTime());
     }
 
+    public synchronized void tick(){
+        Task currentTask = tasks.peek();
+        if(currentTask != null){
+            currentTask.setServiceTime(currentTask.getServiceTime() - 1);
+            waitingPeriod.decrementAndGet();
+            if(currentTask.getServiceTime() <= 0){
+                tasks.poll();
+            }
+        }
+    }
+
     @Override
     public void run() {
         while(!Thread.currentThread().isInterrupted()){
             try {
-                Task temp = tasks.peek();
-                if(temp != null){
-                    Thread.sleep(1000L);
-                    temp.setServiceTime(temp.getServiceTime() - 1);
-                    waitingPeriod.decrementAndGet();
-                    if(temp.getServiceTime() <= 0) {
-                        tasks.poll();
-                    }
-                }else {
-                    Thread.sleep(100);
-                }
+                Thread.sleep(100);
             }catch (InterruptedException e){
                 Thread.currentThread().interrupt();
                 break;

@@ -50,8 +50,6 @@ public class Scheduler {
         this.servers = new ArrayList<Server>();
         for(int i=0 ; i<maxNoServers ; i++) {
             servers.add(new Server());
-            Thread thread = new Thread(servers.get(i));
-            thread.start();
         }
     }
 
@@ -64,8 +62,8 @@ public class Scheduler {
         }
     }
 
-    public void dispatchTask(Task t){
-        strategy.addTask(servers, t);
+    public int dispatchTask(Task t){
+        return strategy.addTask(servers, t);
     }
 
 }
