@@ -15,12 +15,12 @@ public class SimulationManager implements Runnable {
     //private SimulationFrame frame;
     private List<Task> tasks;
     private SelectionPolicy selectionPolicy = SelectionPolicy.SHORTEST_TIME;
-    public int timeLimit = 30;
-    public int maxProcessingTime = 10;
+    public int timeLimit = 60;
+    public int maxProcessingTime = 4;
     public int minProcessingTime = 2;
     public int numberOfServers = 2;
-    public int numberOfClients = 9;
-    public int maxArrivalTime = 20;
+    public int numberOfClients = 4;
+    public int maxArrivalTime = 30;
     public int minArrivalTime = 2;
 
     private double totalWaitingTime = 0;
@@ -82,13 +82,14 @@ public class SimulationManager implements Runnable {
             int currentClients = 0;
             for(Server server :  scheduler.getServers())
                 currentClients += server.getTasks().length;
-            if(currentClients >= maxClients){
+            if(currentClients >  maxClients){
                 maxClients = currentClients;
                 peakHour = currentTime;
             }
             writeLog(currentTime);
             if(tasks.isEmpty() && areAllServersEmpty()) break;
             for(Server server : scheduler.getServers()) server.tick();
+
             try {
                 Thread.sleep(1000L);
             }catch (InterruptedException e){
@@ -98,7 +99,7 @@ public class SimulationManager implements Runnable {
         }
         String stats = "Average waiting time: " + (totalWaitingTime/numberOfClients) +
                         "\nAverage service time: " + (totalServiceTime/numberOfClients) +
-                        "\nPeak hour: " + peakHour;
+                        "\nPeak hour: " + peakHour + ", " + maxClients + " clients";
         System.out.println(stats);
 
         writer.println(stats);
