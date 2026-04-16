@@ -30,4 +30,8 @@ public class Task {
         this.serviceTime = serviceTime;
     }
 
+    @Override
+    public String toString() {
+        return "(" + ID + ", " + arrivalTime + ", " + serviceTime + ")";
+    }
 }

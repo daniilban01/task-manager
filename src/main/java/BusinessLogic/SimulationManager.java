@@ -19,7 +19,7 @@ public class SimulationManager implements Runnable {
     public int maxProcessingTime = 10;
     public int minProcessingTime = 2;
     public int numberOfServers = 2;
-    public int numberOfClients = 5;
+    public int numberOfClients = 9;
     public int maxArrivalTime = 20;
     public int minArrivalTime = 2;
 
@@ -28,10 +28,17 @@ public class SimulationManager implements Runnable {
     private int peakHour = 0;
     private int maxClients = -1;
 
+    private PrintWriter writer;
+
     public SimulationManager(){
         this.scheduler = new Scheduler(numberOfServers, numberOfClients);
         this.scheduler.changeStrategy(selectionPolicy);
         this.pool = Executors.newFixedThreadPool(numberOfServers);
+        try {
+            this.writer = new PrintWriter("log.txt");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         generateNRandomTasks();
     }
 
@@ -61,14 +68,10 @@ public class SimulationManager implements Runnable {
 
     @Override
     public void run() {
-        for(Server server : scheduler.getServers()){
-            pool.execute(server);
-        }
-
+        for(Server server : scheduler.getServers()) pool.execute(server);
         int currentTime = 0;
         while(currentTime <= timeLimit){
             Iterator<Task> iterator = tasks.iterator();
-
             while(iterator.hasNext()){
                 Task task = iterator.next();
                 if(task.getArrivalTime() == currentTime){
@@ -76,7 +79,6 @@ public class SimulationManager implements Runnable {
                     iterator.remove();
                 }
             }
-
             int currentClients = 0;
             for(Server server :  scheduler.getServers())
                 currentClients += server.getTasks().length;
@@ -84,81 +86,36 @@ public class SimulationManager implements Runnable {
                 maxClients = currentClients;
                 peakHour = currentTime;
             }
-
-            System.out.println(getLogOfEvents(currentTime));
-
+            writeLog(currentTime);
             if(tasks.isEmpty() && areAllServersEmpty()) break;
-
-            for(Server server : scheduler.getServers()){
-                server.tick();
-            }
-
+            for(Server server : scheduler.getServers()) server.tick();
             try {
                 Thread.sleep(1000L);
             }catch (InterruptedException e){
                 break;
             }
-
             currentTime++;
-
         }
-        System.out.println("Average waiting time: " + (totalWaitingTime/numberOfClients));
-        System.out.println("Average service time: " + (totalServiceTime/numberOfClients));
-        System.out.println("Peak hour: " + peakHour);
+        String stats = "Average waiting time: " + (totalWaitingTime/numberOfClients) +
+                        "\nAverage service time: " + (totalServiceTime/numberOfClients) +
+                        "\nPeak hour: " + peakHour;
+        System.out.println(stats);
+
+        writer.println(stats);
+        writer.close();
         pool.shutdownNow();
     }
 
-    private String getLogOfEvents(int currentTime) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("Time ").append(currentTime).append("\n");
-
-        sb.append("Waiting clients: ");
-        if (tasks == null || tasks.isEmpty()) {
-            sb.append("none");
-        } else {
-            for (int i = 0; i < tasks.size(); i++) {
-                Task t = tasks.get(i);
-                if (t != null) {
-                    sb.append("(").append(t.getID()).append(", ")
-                            .append(t.getArrivalTime()).append(", ")
-                            .append(t.getServiceTime()).append(")");
-                    if (i < tasks.size() - 1) {
-                        sb.append(", ");
-                    }
-                }
-            }
+    private void writeLog(int time) {
+        String log = "Time " + time + "\nWaiting: " + (tasks.isEmpty() ? "none" : tasks) + "\n";
+        for (int i = 0; i < scheduler.getServers().size(); i++) {
+            Task[] currentTasks = scheduler.getServers().get(i).getTasks();
+            log += "Queue " + (i + 1) + ": " + (currentTasks.length == 0 ? "closed" : Arrays.toString(currentTasks)) + "\n";
         }
-        sb.append("\n");
-
-        List<Server> servers = scheduler.getServers();
-        for (int i = 0; i < servers.size(); i++) {
-            sb.append("Queue ").append(i + 1).append(": ");
-
-            Task[] currentTasks = servers.get(i).getTasks();
-
-            if (currentTasks == null || currentTasks.length == 0) {
-                sb.append("closed");
-            } else {
-                boolean first = true;
-                for (Task t : currentTasks) {
-                    if (t != null) {
-                        if (!first) {
-                            sb.append("; ");
-                        }
-                        sb.append("(").append(t.getID()).append(", ")
-                                .append(t.getArrivalTime()).append(", ")
-                                .append(t.getServiceTime()).append(")");
-                        first = false;
-                    }
-                }
-                if (first) {
-                    sb.append("closed");
-                }
-            }
-            sb.append("\n");
-        }
-        sb.append("-------------------------------------------\n");
-        return sb.toString();
+        log += "-------------------------------------------\n";
+        System.out.print(log);
+        writer.print(log);
+        writer.flush();
     }
 
     private boolean areAllServersEmpty() {
