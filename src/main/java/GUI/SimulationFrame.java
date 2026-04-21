@@ -1,5 +1,6 @@
 package GUI;
 
+import BusinessLogic.SelectionPolicy;
 import Model.Server;
 import Model.Task;
 import javax.swing.*;
@@ -12,8 +13,19 @@ public class SimulationFrame extends JFrame {
     private JLabel timeLabel;
     private JLabel statsLabel;
     private JButton startButton;
-
     private JTextField clientsField, queuesField, maxArrivalField, minArrivalField, maxServiceField, minServiceField, timeLimitField;
+    private JComboBox<SelectionPolicy> strategyComboBox;
+
+    public JButton getStartButton() { return startButton; }
+    public JTextField getClientsField() { return clientsField; }
+    public JTextField getQueuesField() { return queuesField; }
+    public JTextField getMinArrivalField() { return minArrivalField; }
+    public JTextField getMaxArrivalField() { return maxArrivalField; }
+    public JTextField getMinServiceField() { return minServiceField; }
+    public JTextField getMaxServiceField() { return maxServiceField; }
+    public JTextField getTimeLimitField() { return timeLimitField; }
+    public JComboBox<SelectionPolicy> getStrategyComboBox() { return strategyComboBox; }
+
 
     public SimulationFrame() {
         setTitle("Queues Simulator - Real-Time View");
@@ -46,6 +58,8 @@ public class SimulationFrame extends JFrame {
         maxServiceField = new JTextField("4", 5);
         timeLimitField = new JTextField("60", 5);
 
+        strategyComboBox = new JComboBox<>(SelectionPolicy.values());
+
         panel.add(createSettingGroup("Clients", clientsField));
         panel.add(createSettingGroup("Queues", queuesField));
         panel.add(createSettingGroup("Min Arrival", minArrivalField));
@@ -54,7 +68,24 @@ public class SimulationFrame extends JFrame {
         panel.add(createSettingGroup("Max Service", maxServiceField));
         panel.add(createSettingGroup("Time Limit", timeLimitField));
 
+        panel.add(createStrategyGroup("Strategy", strategyComboBox));
+
         return panel;
+    }
+
+    private JPanel createStrategyGroup(String labelText, JComboBox<?> comboBox) {
+        JPanel group = new JPanel();
+        group.setLayout(new BoxLayout(group, BoxLayout.Y_AXIS));
+
+        JLabel label = new JLabel(labelText);
+        label.setAlignmentX(Component.CENTER_ALIGNMENT);
+        comboBox.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        group.add(label);
+        group.add(Box.createVerticalStrut(5));
+        group.add(comboBox);
+
+        return group;
     }
 
     private JPanel createNorthPanel() {
@@ -104,6 +135,24 @@ public class SimulationFrame extends JFrame {
         return group;
     }
 
+    private JPanel createClientBox(Task t, Color color) {
+        JPanel box = new JPanel(new GridLayout(3, 1));
+        box.setPreferredSize(new Dimension(55, 45));
+        box.setBackground(color);
+        box.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+
+        JLabel l1 = new JLabel("ID:" + t.getID(), SwingConstants.CENTER);
+        JLabel l2 = new JLabel("A:" + t.getArrivalTime(), SwingConstants.CENTER);
+        JLabel l3 = new JLabel("S:" + t.getServiceTime(), SwingConstants.CENTER);
+
+        for (JLabel l : new JLabel[]{l1, l2, l3}) {
+            l.setForeground(Color.WHITE);
+            l.setFont(new Font("Arial", Font.BOLD, 9));
+            box.add(l);
+        }
+        return box;
+    }
+
     public void update(int time, List<Task> waiting, List<Server> servers) {
         timeLabel.setText("Time: " + time);
 
@@ -125,35 +174,10 @@ public class SimulationFrame extends JFrame {
         repaint();
     }
 
-    private JPanel createClientBox(Task t, Color color) {
-        JPanel box = new JPanel(new GridLayout(3, 1));
-        box.setPreferredSize(new Dimension(55, 45));
-        box.setBackground(color);
-        box.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-
-        JLabel l1 = new JLabel("ID:" + t.getID(), SwingConstants.CENTER);
-        JLabel l2 = new JLabel("A:" + t.getArrivalTime(), SwingConstants.CENTER);
-        JLabel l3 = new JLabel("S:" + t.getServiceTime(), SwingConstants.CENTER);
-
-        for (JLabel l : new JLabel[]{l1, l2, l3}) {
-            l.setForeground(Color.WHITE);
-            l.setFont(new Font("Arial", Font.BOLD, 9));
-            box.add(l);
-        }
-        return box;
-    }
-
     public void setFinalStats(String stats) {
         statsLabel.setText("<html><center><b style='font-size:12px;'>STATISTICS</b><br>"
                 + stats.replace("\n", "<br>") + "</center></html>");
     }
 
-    public JButton getStartButton() { return startButton; }
-    public JTextField getClientsField() { return clientsField; }
-    public JTextField getQueuesField() { return queuesField; }
-    public JTextField getMinArrivalField() { return minArrivalField; }
-    public JTextField getMaxArrivalField() { return maxArrivalField; }
-    public JTextField getMinServiceField() { return minServiceField; }
-    public JTextField getMaxServiceField() { return maxServiceField; }
-    public JTextField getTimeLimitField() { return timeLimitField; }
+
 }

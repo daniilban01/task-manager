@@ -13,7 +13,7 @@ public class SimulationManager implements Runnable {
     private ExecutorService pool;
     private Scheduler scheduler;
     private List<Task> tasks;
-    private SelectionPolicy selectionPolicy = SelectionPolicy.SHORTEST_TIME;
+    private SelectionPolicy selectionPolicy;
 
     public int timeLimit, maxProcessingTime, minProcessingTime, numberOfServers, numberOfClients, maxArrivalTime, minArrivalTime;
 
@@ -37,6 +37,7 @@ public class SimulationManager implements Runnable {
                 this.minProcessingTime = Integer.parseInt(frame.getMinServiceField().getText());
                 this.maxProcessingTime = Integer.parseInt(frame.getMaxServiceField().getText());
                 this.timeLimit = Integer.parseInt(frame.getTimeLimitField().getText());
+                this.selectionPolicy = (SelectionPolicy) frame.getStrategyComboBox().getSelectedItem();
                 this.totalWaitingTime = 0;
                 this.totalServiceTime = 0;
                 this.maxClients = -1;
@@ -128,7 +129,13 @@ public class SimulationManager implements Runnable {
         System.out.println(stats);
         writer.println(stats);
         writer.close();
-        SwingUtilities.invokeLater(() -> frame.setFinalStats(stats));
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                frame.setFinalStats(stats);
+                frame.getStartButton().setEnabled(true);
+            }
+        });
         pool.shutdownNow();
     }
 
